@@ -1,0 +1,15 @@
+import time # timing
+import matplotlib.pyplot as plt # plotting
+import numpy as np # numbers
+import random # random numbers (probably not useful)
+import pandas as pd # data structures
+import threading # do multiple loops at once
+import pyvisa # instrument control
+import os # for getting the current working directory
+print(os.getcwd())
+from matplotlib import colors
+# Enable panning/zooming in graphs
+%matplotlib inline 
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
+from PyQt5.QtCore import *
