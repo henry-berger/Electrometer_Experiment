@@ -10,7 +10,7 @@ class GUI(QMainWindow):
     def __init__(self, parent=None):        
         super(GUI, self).__init__(parent) # initialize
         self.do_close = False
-        self.setWindowTitle("Pump GUI") # set title
+        self.setWindowTitle("Electrometer Experiment GUI") # set title
         
         # add an PumpInterface, which contains all the other widgets
         self.widget = Main_Interface(self) 
@@ -31,12 +31,13 @@ class GUI(QMainWindow):
             event.accept()
         else:  
             # explain what's happening
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Information)
-            msg.setText("Please use the Exit button to close")
-            msg.setStandardButtons(QMessageBox.Ok)
-            msg.exec()
-            event.ignore()
+#             msg = QMessageBox()
+#             msg.setIcon(QMessageBox.Information)
+#             msg.setText("Please use the Exit button to close")
+#             msg.setStandardButtons(QMessageBox.Ok)
+#             msg.exec()
+#             event.ignore()
+            self.widget.exit()
             
     # send a signal whenever the window is resized (for resizing the image)
     def resizeEvent(self, event):

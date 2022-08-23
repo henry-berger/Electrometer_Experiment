@@ -13,6 +13,8 @@ class Image_Widget(QLabel):
     # add a pixmap        
     def setMyPixmap(self, pixmap):
         self.mypixmap = QPixmap(pixmap)
+        self.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Expanding)
+
         # store the original, so scaling down and up doesn't cause pixelation
         self.originalpixmap = self.mypixmap
         self.setPixmap(self.mypixmap)
@@ -21,7 +23,7 @@ class Image_Widget(QLabel):
         self.W = self.mypixmap.width()
         self.H = self.mypixmap.height()
         self.WH = self.W / self.H
-        
+
         # resizing
         self.window.resized.connect(self.myresize)
         self.setMinimumSize(100, 300)

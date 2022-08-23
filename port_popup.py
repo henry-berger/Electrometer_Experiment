@@ -12,10 +12,10 @@ class Port_Popup(QDialog):
         super(Port_Popup, self).__init__(parent)
         self.p = parent # the overall window
         self.do_close = False # default: don't close unless "Confirm" is pressed
-        
+        self.setWindowTitle("Port Selection")
         # find which ports exist
-        rm = pyvisa.ResourceManager()
-        self.port_list = rm.list_resources()
+        self.rm = pyvisa.ResourceManager()
+        self.port_list = self.rm.list_resources()
         
         self.init_UI()
         
@@ -104,9 +104,7 @@ class Port_Popup(QDialog):
         dlg.setNameFilter("Excel files (*.xlsx)")
         if dlg.exec():
             filename = dlg.selectedFiles()[0] # the filename the user selects
-            self.save_file_name = excelFormat(filename)
+            self.save_file_name = utils.excelFormat(filename)
             self.file_name_label.setText(self.save_file_name)
 #             self.p.set_save_file_name(self.save_file_name)
                 # Shouldn't be necessary because it is read at the end
-
- 

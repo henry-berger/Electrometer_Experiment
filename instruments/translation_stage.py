@@ -43,7 +43,7 @@ class Translation_Stage():
             m = m + str(command) + ","
         return m[:-1] # the -1 to get rid of the the last comma
         
-    def move(self, speed=1, revs=np.nan, dist = np.nan, steps=np.nan):
+    def move(self, dist = np.nan,revs=np.nan, steps=np.nan,speed=1):
         if not np.isnan(dist):
             steps = int(np.round(dist / self.STEP_DIST,0))
                 # it needs to be an int, but int() doesn't round properly, hence the np.round
@@ -82,18 +82,18 @@ class Translation_Stage():
 
 #************************ Other **************************#
     
-    def zero(self):
-        # move the motor to 0
-        if self.get_position() != 0:
-            self.go_to(-1)
-            utils.mysleep(2) # give the motor time to move
-            self.go_to(0)
-        else:
-            self.p.display_command("Already at 0.")
+#     def zero(self):
+#         # move the motor to 0
+#         if self.get_position() != 0:
+#             self.go_to(-1)
+#             mysleep(2) # give the motor time to move
+#             self.go_to(0)
+#         else:
+#             self.p.display_command("Already at 0.")
     
     def get_position(self):
 # A guess at how to query the position:
-#         if self.real_stage:
+#         if True or self.real_stage:
 #             pos = self.inst.query("X")
 #             print(pos)
 #             return float(pos)
@@ -109,3 +109,37 @@ class Translation_Stage():
         except:
             pass
         
+    def zero(self,back=-1,speed=1):
+        if self.get_position()==0:
+            self.p.display_command("Already at 0.")
+        else:
+            
+            dist = back-self.get_position()
+            steps1 = int(np.round(dist / self.STEP_DIST,0))
+                    # it needs to be an int, but int() doesn't round properly, hence the np.round
+            steps2 = int(np.round((-1*back) / self.STEP_DIST,0))
+
+            self.position += self.STEP_DIST * (steps1+steps2) 
+            message = self.message("F", # VXM On-Line WITH Echo OFF 
+                                   "PM-0", # Change To AND Clear Program 0
+                                   "S"+self.mn+"M"+ # set speed to ...
+                                   str(int(speed*1000)),
+                                   "I"+self.mn+"M"+ # set go a distance to ...
+                                   str(steps1),
+                                   "P10",
+                                   "I"+self.mn+"M"+ # set go a distance to ...
+                                   str(steps2),
+                                   "R" # Run
+                                  )
+            if self.real_stage:
+                self.inst.write(message) # send the command
+            text = "Moved {s1:n} then {s2:n} steps to position {p1:.04f} mm then {p2:.04f} mm."
+            report = (text.format(s1=steps1,s2=steps2,p1=back,p2=self.get_position()))
+            print(report)
+            try:
+                self.p.ow.stage_pos_display.setText(str(self.get_position())+self.STEP_UNITS)
+                self.p.display_command(report)
+                # this is only in a try/except so that when I create a test instance,
+                # it doesn't throw an error because there's no parent
+            except: pass
+            return(message)

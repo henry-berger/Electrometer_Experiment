@@ -52,4 +52,4 @@ class Electrometer():
         self.data_rate = 1
         self.end_next = False
         self.graphing = False
-"""
+""";

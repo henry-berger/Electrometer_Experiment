@@ -75,21 +75,6 @@ def mysleep(t):
     while gt()<t0+t:
         pass
 
-"""
-Turns a string into a number
-    - integers turn into ints
-    - other numbers turn into floats
-    - non-numbers turn into np.nan
-"""
-def to_num(string):
-    try:
-        n = float(string)
-    except:
-        return np.nan
-    if n % 1 == 0:
-        return int(n)
-    return n
-
 # There can't be multiple QApplications at once, so this function opens one but makes sure it's the only one
 def qap():
     if not QApplication.instance():

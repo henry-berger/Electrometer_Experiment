@@ -1,4 +1,5 @@
 import threading
+import numpy as np
 import pandas as pd # data structures
 import matplotlib.pyplot as plt
 
@@ -13,7 +14,7 @@ import utils
 
 
 ## The widget containing everything
-class Main_Interface(QWidget): 
+class Pump_Interface(QWidget): 
 
 #####################################################################################################################################
 ##********************** Initialize ***********************************************************************************************##
@@ -21,7 +22,7 @@ class Main_Interface(QWidget):
 
     def __init__(self, parent):        
     # basic initialize
-        super(Main_Interface, self).__init__(parent) # initialize
+        super(Pump_Interface, self).__init__(parent) # initialize
         self.window = parent
     # Prompt the user for the names of the ports
         self.popup = Port_Popup(self)
@@ -44,7 +45,7 @@ class Main_Interface(QWidget):
         self.run_number = 1
     # running parameters
         self.scan_distance = 10
-        self.wait_time = 1
+        self.wait_time = 1.5
         self.measure_time = 3
         self.ssd = 0.5
     # running parameter defaults
@@ -63,13 +64,33 @@ class Main_Interface(QWidget):
         self.layout.addLayout(self.input_layout,0,0)      
     # parameter layout
         self.pw = widgets.Parameter_Widget(self)
-        self.input_layout.addLayout(self.pw.param_layout,0,0) 
+        self.input_layout.addWidget(self.pw.param_widget,0,1) 
+    # separator
+        Separator = QFrame()
+        Separator.setFrameShape(QFrame.VLine)
+        Separator.setSizePolicy(QSizePolicy.Minimum,QSizePolicy.Expanding)
+        Separator.setLineWidth(1)
+#         Separator.setFixedWidth(2)
+        self.input_layout.addWidget(Separator,0,2)
+    # buffers on the sides
+        blank1 = QLabel("")
+        blank1.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Expanding)
+        blank2 = QLabel("")
+        blank2.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Expanding)
+        self.input_layout.addWidget(blank1,0,0)       
+        self.input_layout.addWidget(blank2,0,4)       
+
+        
     # control layout
         self.cw = widgets.Control_Widget(self)
-        self.input_layout.addLayout(self.cw.control_layout,1,0)        
+        self.input_layout.addWidget(self.cw.control_widget,0,3)       
+        
     # output layout
         self.ow = widgets.Output_Widget(self)
-        self.layout.addLayout(self.ow.output_layout,1,0)
+        self.layout.addWidget(self.ow.output_widget,1,0)
+        
+
+        
 
 
 #************************** Setter functions for the popup ****************************************#
@@ -95,7 +116,10 @@ class Main_Interface(QWidget):
         self.cw.run_btn.setText("Running...")
         self.cw.run_btn.setEnabled(False)
         self.cw.collect_btn.setEnabled(False)
-
+        if len(self.data['run']>0):
+            self.run_number = int(max(self.data['run']))+1
+        else:
+            self.run_number = 1
         # start the data collection loop
         self.run_loop = threading.Thread(target=self.run_looper)
         self.abort_now = False
@@ -122,7 +146,7 @@ class Main_Interface(QWidget):
 
         self.last_event = 0
         target_position = self.ssd
-        while self.t.get_position() < self.scan_distance and not self.abort_now:
+        while self.t.get_position() < self.scan_distance + self.ssd*0.25 and not self.abort_now:
             while utils.gt()-self.last_event < self.wait_time:
                 self.ow.time_display.setText(utils.timeFormat(utils.gt()-self.e.t0))
                 if self.abort_now:
@@ -136,13 +160,16 @@ class Main_Interface(QWidget):
 #             self.collect_btn.setChecked(False)
             self.collect(on=False)
             self.ow.progress.setValue(int(100*target_position/self.scan_distance))
-            self.t.go_to(target_position)
-#             print(int(100*target_position/self.scan_distance))
-            target_position += self.ssd
+            if (target_position < self.scan_distance + self.ssd*0.25):
+                self.t.go_to(target_position)
+                target_position += self.ssd
+            else:
+                self.abort_now = True
             self.last_event = utils.gt()
         self.cw.run_btn.setText("Run")
         self.cw.run_btn.setEnabled(True)
         self.cw.collect_btn.setEnabled(True)
+        self.reset()
 #         self.progress.setValue(0)
 
 #####################################################################################################################################
@@ -150,7 +177,8 @@ class Main_Interface(QWidget):
 #####################################################################################################################################
 
     def collect_data(self):
-        self.tval,self.yval,self.zval = self.e.time(), self.e.getval(),self.t.get_position() # get data
+        self.tval,self.zval = self.e.time(), self.t.get_position() # get data
+        self.yval = self.e.getval() # this has to be last because it takes a while, and otherwise the delay would mess up the z reading
         self.data = self.data.append([{'t':self.tval,'V':self.yval, 'z':self.zval, 'run':self.run_number}], ignore_index = True) # append data    
     
     def collect_button_signal(self):
@@ -200,7 +228,7 @@ class Main_Interface(QWidget):
 #                 self.saved = False
 #                 # display the time and stuff
 #                 self.pos_display.setText(str(sigfigs1(self.e.y,3))+" V")
-#                 self.time_display.setText(timeFormat(self.e.t))
+#                 self.time_display.setText(utils.timeFormat(self.e.t))
 
     def data_update(self):
         last_update = utils.gt()-self.data_period # the -period is so that it starts immediately
@@ -228,12 +256,18 @@ class Main_Interface(QWidget):
 
             if self.first_graphing:
                 # initalize the graph
-                self.first_collection = False
+                self.first_graphing = False
                 self.graph_widget = widgets.Image_Widget(self)
                 self.ow.output_layout.addWidget(self.graph_widget,self.ow.row,0,4,0)
 #                 self.graph_widget.setScaledContents(True)
                 plt.ioff()
 #                 plt.figure(figsize=(10,10))
+#                 try:
+#                     self.ow.output_layout.removeWidget(self.ow.blank)
+#                     self.ow.blank.deleteLater()
+#                     self.ow.blank = None
+#                 except:
+#                     pass
 
 
             self.graph_loop = threading.Thread(target=self.graph_update) # A loop for data collection
@@ -252,17 +286,19 @@ class Main_Interface(QWidget):
         while not self.graph_end_now:
             if self.last_event-last_update > self.measure_time:
                 last_update = utils.gt()
-#                 plt.ioff() # in interactive mode, the graph doesn't display until you x out
+                print("Graphed")
+# #                 plt.ioff() # in interactive mode, the graph doesn't display until you x out
                 plt.clf() # clear previous graphs
-                self.draw_graph()
-                # is there a more elegant way of doing this?
+                self.plot_graph()
+        #                 # is there a more elegant way of doing this?
                 plt.savefig('saved_figure.png')
                 self.pixmap = QPixmap('saved_figure.png')
                 self.graph_widget.setMyPixmap(self.pixmap)
                 self.graph_widget.myresize()
+#                 print("Graphed")
                 
     # draws and formats the graph
-    def draw_graph(self):
+    def plot_graph(self):
         for i in range(int(min(self.data['run'])),int(max(self.data['run']))+1):
             single_run = self.data.loc[self.data['run'] == i ]
             plt.plot(single_run['z'],single_run['V'],".",label="Run "+str(i))
@@ -290,10 +326,11 @@ class Main_Interface(QWidget):
             filename = dlg.selectedFiles()[0] # the filename the user selects
             self.save_file_name = utils.excelFormat(filename)
 #             print(filename)
-            self.data.to_excel(self.save_file_name) # adds .xlsx if necessary
+#             self.data.to_excel(self.save_file_name) # adds .xlsx if necessary
+            self.compile_and_save()
             print("Saved as", self.save_file_name)
             # make a note that it's been saved
-            self.window.setWindowTitle("Pump GUI")
+#             self.window.setWindowTitle("Pump GUI")
             self.saved = True
             self.display_command("Saved as "+str(self.save_file_name))
 
@@ -318,10 +355,35 @@ class Main_Interface(QWidget):
             if self.last_event-last_update > self.measure_time and not self.saved:
                 last_update = utils.gt()
 #                 self
-                self.data.to_excel(self.save_file_name) # adds .xlsx if necessary
+#                 self.data.to_excel(self.save_file_name) # adds .xlsx if necessary
+                self.compile_and_save()
                 self.display_command("Saved as "+str(self.save_file_name))
-                self.window.setWindowTitle("Pump GUI")
+#                 self.window.setWindowTitle("Pump GUI")
                 self.saved = True
+    
+    def compile_and_save(self):
+        self.sum_data = self.summarize_data()
+        Excelwriter = pd.ExcelWriter(self.save_file_name,engine="xlsxwriter")
+        self.sum_data.to_excel(Excelwriter, sheet_name="Summary Data",index=False)
+        self.data.to_excel(Excelwriter, sheet_name="All Data",index=False)
+        Excelwriter.save()
+        
+    
+    def summarize_data(self):
+        # make a copy where the z-values are rounded, so there aren't two copies at 3.00037 and 3.00038
+        data = self.data.copy()
+        for z in data['z'].unique():
+            data.loc[data['z']==z,'z']=np.round(z,3)
+            
+        sum_data = pd.DataFrame({'z' : data['z'].unique()})
+        for run in data['run'].unique():
+            for z in data['z'].unique():
+                if len(data.loc[(data['z']==z) & (data['run']==run)]['V'])>0:
+                    val = np.average(data.loc[(data['z']==z) & (data['run']==run)]['V'])
+                else: val = np.nan
+                sum_data.loc[sum_data['z']==z,'run '+str(int(run))]=val
+        return sum_data
+    
         
 #####################################################################################################################################
 ##********************** Exiting **************************************************************************************************##
@@ -375,6 +437,10 @@ class Main_Interface(QWidget):
             self.run_loop.join() 
         except:
             pass
+        try: 
+            self.popup.rm.close()
+        except:
+            pass
         print(self.data)
         self.window.myclose()
         
@@ -382,6 +448,14 @@ class Main_Interface(QWidget):
 #####################################################################################################################################
 ##********************** Miscellaneous ********************************************************************************************##
 #####################################################################################################################################
+
+    def move_stage_dist(self):
+        self.t.move(dist=utils.to_num(self.cw.move_dist_input.text()))
+        self.cw.move_dist_input.setText("")
+        
+    def move_stage_loc(self):
+        self.t.go_to(position=utils.to_num(self.cw.move_loc_input.text()))
+        self.cw.move_loc_input.setText("")
             
     def display_command(self, text, success=True):
         try:
@@ -400,7 +474,11 @@ class Main_Interface(QWidget):
             self.run_loop.join() 
         except:
             pass
-        self.run_number += 1
+        try:
+            self.run_number = int(max(self.data['run']))+1
+        except:
+            self.run_number = 1
+        print("Run number = ",self.run_number)
         self.ow.progress.setValue(0)
         self.t.zero()
         
