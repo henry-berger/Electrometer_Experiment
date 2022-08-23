@@ -14,7 +14,7 @@ import utils
 
 
 ## The widget containing everything
-class Pump_Interface(QWidget): 
+class Main_Interface(QWidget): 
 
 #####################################################################################################################################
 ##********************** Initialize ***********************************************************************************************##
@@ -22,7 +22,7 @@ class Pump_Interface(QWidget):
 
     def __init__(self, parent):        
     # basic initialize
-        super(Pump_Interface, self).__init__(parent) # initialize
+        super(Main_Interface, self).__init__(parent) # initialize
         self.window = parent
     # Prompt the user for the names of the ports
         self.popup = Port_Popup(self)
